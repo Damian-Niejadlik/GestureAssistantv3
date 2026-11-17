@@ -1,0 +1,9 @@
+PySide6
+opencv-python
+mediapipe
+numpy
+pytest
+ruff
+
+PyGetWindow; sys_platform == 'win32'
+Pillow
