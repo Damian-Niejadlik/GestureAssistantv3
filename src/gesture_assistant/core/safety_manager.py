@@ -11,6 +11,10 @@ from src.gesture_assistant.gestures.definitions import Gesture, Motion, Quality
 from src.gesture_assistant.integrations import ACTION_CATALOG
 from src.gesture_assistant.integrations.contracts import ContextKind
 
+from src.gesture_assistant.integrations.media_actions import (
+    DEFAULT_SHORTCUTS as MEDIA_SHORTCUTS,
+)
+
 
 @dataclass(frozen=True)
 class ActionRequest:
@@ -203,7 +207,23 @@ class SafetyManager:
     def _context_reason(self, action, context, now):
         if not 0 <= now - context.observed_ms <= 250 or context.foreground is None:
             return "unknown_or_stale_context"
-        if not action.requires_target:
+        native_volume_key = {
+            "media.volume_up": "volume_up",
+            "media.volume_down": "volume_down",
+        }.get(action.action_id)
+
+        uses_native_volume_key = (
+                native_volume_key is not None
+                and self._config["targets"]["shortcuts"]
+                .get(action.action_id, MEDIA_SHORTCUTS[action.action_id])
+                .strip()
+                .lower()
+                == native_volume_key
+        )
+
+        if not action.requires_target or (
+                uses_native_volume_key and context.is_own_process
+        ):
             # URL is launched through the OS, not typed into a window. The sole exception
             # to a known external target is our own, positively identified process.
             if context.kind == ContextKind.UNKNOWN and not context.is_own_process:

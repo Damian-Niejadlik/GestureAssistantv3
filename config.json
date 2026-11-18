@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mode": "System",
+  "mode": "Media",
   "camera": {
     "index": 0,
     "fps_limit": 30,
@@ -31,23 +31,12 @@
     "confirmed_destructive": []
   },
   "allowed_actions": [
-    "browser.new_tab",
     "browser.open_url",
-    "sleep_computer"
+    "media.volume_up"
   ],
   "bindings": {
-    "OPEN_PALM": "browser.open_url",
-    "FIST": "none",
-    "THUMBS_UP": "sleep_computer",
-    "THUMBS_DOWN": "none",
-    "VICTORY": "none",
-    "POINTING_UP": "none",
-    "PINCH": "none",
-    "ROCK": "none",
-    "SWIPE_LEFT": "none",
-    "SWIPE_RIGHT": "none",
-    "SWIPE_UP": "none",
-    "SWIPE_DOWN": "none"
+    "VICTORY": "media.volume_up",
+    "OPEN_PALM": "browser.open_url"
   },
   "targets": {
     "applications": {},
@@ -59,11 +48,12 @@
       "browser.refresh_page": "ctrl+r",
       "browser.go_back": "alt+left",
       "browser.previous_tab": "ctrl+shift+tab",
-      "browser.next_tab": "ctrl+tab"
+      "browser.next_tab": "ctrl+tab",
+      "media.volume_up": "volume_up"
     }
   },
   "execution": {
-    "dry_run": true
+    "dry_run": false
   },
   "profiles": {
     "Teams": {

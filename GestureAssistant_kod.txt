@@ -1,6 +1,6 @@
 GESTUREASSISTANT — EKSPORT KODU PROJEKTU
-Data eksportu: 2026-11-17 23:52:55
-Liczba plików: 118
+Data eksportu: 2026-11-18 12:21:09
+Liczba plików: 122
 
 ========== LISTA PLIKÓW ==========
 .gitignore
@@ -16,6 +16,9 @@ docs\ACTIONS.md
 docs\ARCHITECTURE.md
 docs\AUDIT_STAGE2.md
 docs\AUDIT_STAGE3.md
+docs\EXECUTION_FIX.md
+docs\EXECUTION_FIX_LOG.txt
+docs\EXECUTION_FIX_MANIFEST.json
 docs\GESTURE_LIMITATIONS.md
 docs\HANDOFF.md
 docs\IMPLEMENTATION_3B.md
@@ -112,6 +115,7 @@ tests\test_hand_provider_runtime.py
 tests\test_integrations_final.py
 tests\test_media_actions.py
 tests\test_motion_classifier.py
+tests\test_open_url_execution.py
 tests\test_pose_provider.py
 tests\test_presentation_actions.py
 tests\test_runtime_lifecycle.py
@@ -208,7 +212,9 @@ logs/
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a52fb4ea-1b71-4e84-91f8-7bdcc82439de" name="Changes" comment="" />
+    <list default="true" id="a52fb4ea-1b71-4e84-91f8-7bdcc82439de" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/config.json" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -217,20 +223,20 @@ logs/
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 8
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
   <component name="ProjectId" id="3MF5EiEXslh5c5efhxVGYuz3mZv" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -255,7 +261,7 @@ logs/
 ========== PLIK: config.json ==========
 {
   "schema_version": 1,
-  "mode": "Browser",
+  "mode": "Auto",
   "camera": {
     "index": 0,
     "fps_limit": 30,
@@ -282,27 +288,14 @@ logs/
   "safety": {
     "paused": true,
     "enabled": true,
-    "sleep_computer": false,
+    "sleep_computer": true,
     "confirmed_destructive": []
   },
   "allowed_actions": [
-    "browser.new_tab",
-    "browser.open_url",
-    "sleep_computer"
+    "media.volume_up"
   ],
   "bindings": {
-    "OPEN_PALM": "browser.open_url",
-    "FIST": "none",
-    "THUMBS_UP": "sleep_computer",
-    "THUMBS_DOWN": "none",
-    "VICTORY": "none",
-    "POINTING_UP": "none",
-    "PINCH": "none",
-    "ROCK": "none",
-    "SWIPE_LEFT": "none",
-    "SWIPE_RIGHT": "none",
-    "SWIPE_UP": "none",
-    "SWIPE_DOWN": "none"
+    "VICTORY": "media.volume_up"
   },
   "targets": {
     "applications": {},
@@ -314,11 +307,12 @@ logs/
       "browser.refresh_page": "ctrl+r",
       "browser.go_back": "alt+left",
       "browser.previous_tab": "ctrl+shift+tab",
-      "browser.next_tab": "ctrl+tab"
+      "browser.next_tab": "ctrl+tab",
+      "media.volume_up": "volume_up"
     }
   },
   "execution": {
-    "dry_run": false
+    "dry_run": true
   },
   "profiles": {
     "Teams": {
@@ -328,7 +322,7 @@ logs/
     },
     "Browser": {
       "FIST": "browser.new_tab",
-      "THUMBS_UP": "browser.refresh_page",
+      "THUMBS_UP": "browser.open_url",
       "SWIPE_LEFT": "browser.previous_tab",
       "SWIPE_RIGHT": "browser.next_tab",
       "POINTING_UP": "browser.go_back",
@@ -417,6 +411,14 @@ Screenshot jest obrazem pulpitu i może zawierać dane prywatne. Nie jest wysył
 | browser.refresh_page | Ctrl+R |
 | browser.go_back | Alt+Left |
 
+browser.open_url jest akcją uruchamianą przez OS, a nie skrótem do aktywnego okna.
+Może być wywołana z globalnego bindingu nad dowolnym poprawnie odczytanym procesem,
+w tym nad samym GestureAssistant. Wymaga identyfikacji HWND/PID/exe; brak odczytu blokuje.
+Nie wymaga wcześniej otwartej przeglądarki i nie wymaga zgodności wymuszonego profilu.
+Nadal wymaga enabled, allowed_actions, stabilizacji700ms, LIVE i wznowienia PAUSED.
+Zmiana fokusu między wydaniem requestu a guard nadal unieważnia żądanie.
+Pozostałe browser.* wymagają faktycznej przeglądarki i nie trafiają do naszego GUI.
+
 URL w targets.urls["browser.open_url"], tylko niepusty HTTPS bez poświadczeń i znaków
 sterujących. webbrowser może wybrać domyślny handler OS, nie aktywną przeglądarkę.
 Potwierdzenie przyjęcia żądania nie oznacza zakończenia ładowania strony.
@@ -467,7 +469,8 @@ Profiles:
   swipe right/left=next/previous track.
 - System: FIST=output mute, PINCH=screenshot, swipe left/right=desktop.
 
-Każde mapowanie wymaga osobnego wpisu w allowed_actions. Globalne bindings nadpisują profiles.
+Każde mapowanie wymaga osobnego wpisu w allowed_actions. Globalne bindings nadpisują profiles. W GUI globalne "Dziedzicz z aktywnego profilu"
+usuwa binding dla gestu; "Brak akcji — blokuj" zapisuje jawne none. Nie są tym samym.
 Zmiana skrótu: targets.shortcuts["presentation.start_presentation"]="shift+f5".
 Tak samo dla media.*, teams.* i browser.*. Surowe klawisze multimedialne są dozwolone
 wyłącznie dla ID Media i bez modyfikatorów. Nie wolno nimi przemycać akcji systemowej do Teams.
@@ -484,7 +487,8 @@ nowe mapowania dodaj jawnie albo skopiuj dostarczony przykład. Restart stosuje 
 
 pygetwindow.getActiveWindow -> HWND -> WinAPI PID/exe, ponowne sprawdzenie fokusu.
 Auto: Teams, browser, powerpnt, vlc/spotify/wmplayer, pozostały wiarygodny .exe=System.
-Brak prawidłowego odczytu/własny proces=Unknown i odmowa. NUL/kontrolne znaki i pliki
+Brak prawidłowego odczytu=Unknown i odmowa. Własny proces=Unknown z zachowaną
+zweryfikowaną tożsamością; jedynym wyjątkiem dopuszczonym nad własnym GUI jest open_url. NUL/kontrolne znaki i pliki
 nie-.exe nie są klasyfikowane jako System. Nie rozpoznajemy po tytule okna.
 Wymuszony profil nie omija kontroli aplikacji: Media nad PowerPoint nie wyśle klawisza Media.
 System blokowany w Teams, przeglądarkach i WebView2, także przy wymuszeniu System.
@@ -526,6 +530,10 @@ Legacy Pose pozostaje nieaktywne, nie jest rozbudowywane ani używane przez nowe
 
 HandResult, ActionRequest, ActionOutcome i AnalysisResult zachowane. tracking_epoch
 oddziela ciągłe sekwencje śledzenia. NativeDispatcher dostaje request i callable guard.
+ActionSpec ma nowe opcjonalne pole requires_target=True. Tylko browser.open_url ustawia False;
+jest to wyjątek od zgodności profilu/aplikacji, nie wyjątek od uprawnień ani świeżości danych.
+ContextSnapshot.is_own_process bazuje na odczytanym PID; własny proces pozostaje Unknown,
+nie System. Identity jest zachowana także dla własnego GUI. Konsumenci i testy zaktualizowani.
 Named adapters: (keyboard/backend, guard, shortcuts=None). Legacy execute nie jest aktywnym API.
 Katalog ma nowe ID presentation.start_presentation/end_presentation i media.stop/volume_up/
 volume_down/previous_track; poprzednie ID zachowano. system.launch_application nadal odmawia.
@@ -551,6 +559,16 @@ PAUSED, cooldown, błędne konfiguracje i brak równoległych akcji.
 Mock SendInput nie jest walidacją ctypes/Windows ani konkretnego odbiorcy klawiszy.
 Pełne środowisko Qt/kamera wymaga Windows i zależności; raport VERIFICATION_3C.md.
 Szczegóły funkcji ACTIONS.md, polityka SAFETY.md, przejęcie HANDOFF.md.
+
+## Poprawka wykonywania po rozpoznaniu
+
+AnalysisPipeline dobiera confidence z klasyfikatora, którego gest rzeczywiście wybrał.
+Fallback raw nie może używać confidence odrzuconej klasyfikacji EMA.
+ActionRuntime publikuje diagnostics także po safety.observe=False: tracking_reason,
+stable_ms, required_hold_ms i consumer_running. Żaden z tych pól nie nadaje uprawnień.
+GUI odróżnia brak globalnego bindingu (inherit) od jawnego none.
+ActionRuntime.set_dry_run zmienia tryb przez apply_config, a nie sam publiczny flag executora.
+W CameraWorker pipeline otrzymuje bieżące ustawienia także przed pierwszym startem.
 
 ========== KONIEC PLIKU ==========
 
@@ -626,6 +644,446 @@ Nie instalowano pakietów globalnie. Windows i kamera nie są dostępne.
 
 ========== KONIEC PLIKU ==========
 
+========== PLIK: docs\EXECUTION_FIX.md ==========
+# Naprawa: gest rozpoznany, ale brak wykonania akcji
+
+Baza: GestureAssistant_kod.txt z2026-11-17 23:52:55,118plików.
+Nie korzystano ze starszego eksportu ani nie zmieniano config.json użytkownika.
+
+## Przyczyny potwierdzone w kodzie i testach
+
+1. browser.open_url dziedziczyło wymaganie aktywnej przeglądarki; przy aktywnym podglądzie
+   własny proces był odrzucany w czytniku kontekstu. Mapowanie było widoczne bez requestu.
+   Nowy ActionSpec.requires_target=True (domyślnie). False tylko dla browser.open_url.
+   URL jest uruchamiany przez OS, nie wysyłany do aktywnego okna. Dopuszczone są własne
+   poprawnie odczytane HWND/PID/exe oraz inne rozpoznane procesy. Brak odczytu nadal odmawia.
+   Guard nadal sprawdza tożsamość między kolejką a wykonaniem. Nie jest to fallback do
+   ostatniego aktywnego okna. Żadne hotkeys nie trafiają do GUI GestureAssistant.
+2. Gdy EMA było UNKNOWN, a raw miało gest, confidence pochodziło z odrzuconego wyniku EMA.
+   Przy konflikcie dwóch pewnych gestów UNKNOWN mogło mieć dodatnią pewność raw.
+   Teraz confidence odpowiada wybranemu klasyfikatorowi, a konflikt ma0. Nie obniżono progu.
+3. Zmiana przycisku LIVE nie synchronizowała checkboxa dry-run i runtime config.
+   Kolejny zapis parametrów mógł przywrócić stary tryb. Nowe set_dry_run synchronizuje
+   config/executor, czyści stare tokeny i pauzuje. GUI synchronizuje checkboxy.
+4. Globalne GUI nie odróżniało braku bindingu od jawnego none. Zapis tabeli tworzył
+   blokady dla odziedziczonych gestów. Teraz "Dziedzicz z aktywnego profilu" usuwa wpis,
+   a "Brak akcji — blokuj" zachowuje jawne none. Istniejące blokady nie są kasowane samoczynnie.
+5. Nieaktualna klatka odrzucana przed aktualizacją diagnostics zostawiała starą etykietę.
+   Teraz widać stan śledzenia, stable_ms/required_hold_ms i consumer_running.
+   Początkowy pipeline dostaje konfigurację także przed startem CameraWorker.
+
+## Zastosowanie
+
+Zamknij aplikację. Umieść aktualizuj_wykonywanie_akcji.py obok katalogu projektu.
+Z katalogu projektu, w swoim aktywnym .venv:
+
+```powershell
+python ..\aktualizuj_wykonywanie_akcji.py
+python main.py
+```
+
+Aktualizator sprawdza zgodność plików z bazą23:52:55 (lub już zastosowaną poprawką).
+Nieznane lokalne zmiany blokują nadpisanie. Najpierw wykonuje backup zmienianych plików.
+Zapis pojedynczych plików jest przez replace; cała wieloplikowa aktualizacja nie jest transakcją.
+Nie dotyka config.json, modelu, wymagań ani ustawień kamery. Nie wykonuje działań natywnych.
+
+W UI: Start -> upewnij się, że tryb to LIVE -> Akcje: PAUSED -> zatwierdź wznowienie.
+Przy OPEN_PALM przytrzymaj wyraźnie dłoń przez>=700ms. URL może być otwarty także z podglądu.
+Po sukcesie zwolnij gest przez>=1s i zachowaj cooldown>=2s. Samo trzymanie nie otwiera wielu kart.
+Zapis ustawień i zmiana LIVE/DRY RUN celowo znów wstrzymują akcje.
+Pozostałe skróty nadal wymagają aktywnego docelowego programu.
+W Twoim eksporcie enabled=true i dry_run=false; paused=true. Nie zmieniono tych flag.
+sleep_computer pozostaje wyłączone i nie zadziała od samego przypisania THUMBS_UP.
+
+## Rzeczywista weryfikacja
+
+Środowisko: Linux Python3.12.8, nie Windows użytkownika.
+Przed zmianami istniejące testy bez Qt:286passed.
+Nowy test odtworzenia OPEN_PALM nad własnym oknem: przed poprawką1failed (brak requestu),
+po poprawce przechodzi i rejestruje dokładnie1wywołanie atrapy webbrowser.open.
+Osobne odtworzenie confidence przed poprawką:2failed,1passed.
+
+Po poprawce, pełny jawnie wybrany zestaw bez Qt (bez zmian markerów/skips):
+316 passed in 0.83s
+316 passed in 0.80s
+316 passed in 0.79s
+Każdy exit0. Zachowano wszystkie poprzednie testy i asercje.
+Nowe przypadki obejmują także realny wątek GestureActions z atrapą przeglądarki,
+pełny pipeline syntetyczny->runtime->executor->dispatcher->webbrowser,
+700ms, pause/enabled/allowlist/dry-run, brak fokusu przeglądarki, nieznany kontekst,
+blokadę hotkeys we własnym GUI, brak powtórzeń, cofnięcie starych tokenów przy LIVE,
+świeżość diagnostyki i raportowanie błędów handlera.
+Sprawdzono także Twój niezmieniony config.json w osobnym procesie z atrapą webbrowser:
+przed Resume brak wykonania, po Resume właściwy URL trafia do atrapy dokładnie raz.
+
+Pełne python -m pytest -v: exit2, błędy kolekcji test_app_state/test_ui_stage2
+(brak PySide6) i test_camera_worker (brak libGL.so.1/OpenCV).
+Nowe testy GUI dopisane w test_ui_stage2 NIE zostały wykonane z powodu tego ograniczenia.
+Nie usuwano ani nie skipowano tych modułów w poleceniu pełnego zestawu.
+python -m ruff check .: exit1, No module named ruff.
+python main.py: exit1, brak PySide6. Brak potwierdzenia uruchomienia GUI.
+Sprawdzono składnię84plików Python przez ast.parse, nie jest to zamiennik lintu.
+
+Nie otwierano prawdziwej strony i nie wykonywano SendInput, sleep, screenshot ani innych
+akcji OS. Sprawdzenie callbacka z atrapą nie dowodzi działania domyślnego handlera Windows.
+webbrowser.open=True oznacza przyjęcie żądania, nie załadowanie strony ani zmianę fokusu.
+Nie mogę potwierdzić pozostałych przyczyn w Twoim runtime bez jego komunikatu diagnostycznego.
+
+## Kontrakty i przekazanie
+
+ActionSpec: nowe opcjonalne requires_target; dotychczasowe konstruktory pozostają zgodne.
+ContextSnapshot: is_own_process. Własny proces pozostaje Unknown, nie dostaje System.
+SafetyManager: diagnostyczne observation_reason i stable_ms, nie nadają uprawnień.
+ActionRuntime: set_dry_run(bool), nowe pola diagnostyczne. Nie zmieniaj flag osobno z GUI.
+Dziedziczenie to sentinel GUI inherit, NIE jest zapisywany w JSON ani katalogu akcji.
+Nie ruszano Pose. Szczegółowe logi: EXECUTION_FIX_LOG.txt. Lista zmian/sumy: manifest.
+
+========== KONIEC PLIKU ==========
+
+========== PLIK: docs\EXECUTION_FIX_LOG.txt ==========
+COMMANDS
+python -m pytest -v
+python -m ruff check .
+python -m pytest -q tests/test_open_url_execution.py
+python -m pytest -q tests/test_action_executor.py tests/test_analysis_pipeline.py tests/test_config_manager.py tests/test_context_detector.py tests/test_context_reader.py tests/test_debounce.py tests/test_gesture_classifier.py tests/test_hand_provider.py tests/test_hand_provider_runtime.py tests/test_integrations_final.py tests/test_media_actions.py tests/test_motion_classifier.py tests/test_open_url_execution.py tests/test_pose_provider.py tests/test_presentation_actions.py tests/test_runtime_lifecycle.py tests/test_safety_manager.py tests/test_smoothing.py tests/test_swipe_and_actions_enhanced.py tests/test_teams.py tests/test_windows_actions.py
+python -m pytest -v
+python -m ruff check .
+python main.py
+
+=== baseline_full; exit2 ===
+============================= test session starts ==============================
+platform linux -- Python 3.12.8, pytest-8.3.5, pluggy-1.6.0 -- /usr/local/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /home/user/work/GestureAssistant
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.9.0
+collecting ... collected 286 items / 3 errors
+
+==================================== ERRORS ====================================
+___________________ ERROR collecting tests/test_app_state.py ___________________
+ImportError while importing test module '/home/user/work/GestureAssistant/tests/test_app_state.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_app_state.py:1: in <module>
+    from src.gesture_assistant.app.app_state import AppState
+src/gesture_assistant/app/app_state.py:1: in <module>
+    from PySide6.QtCore import QObject, Signal
+E   ModuleNotFoundError: No module named 'PySide6'
+_________________ ERROR collecting tests/test_camera_worker.py _________________
+ImportError while importing test module '/home/user/work/GestureAssistant/tests/test_camera_worker.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_camera_worker.py:6: in <module>
+    from src.gesture_assistant.vision.camera_worker import CameraWorker
+src/gesture_assistant/vision/camera_worker.py:5: in <module>
+    import cv2
+/usr/local/lib/python3.12/site-packages/cv2/__init__.py:181: in <module>
+    bootstrap()
+/usr/local/lib/python3.12/site-packages/cv2/__init__.py:153: in bootstrap
+    native_module = importlib.import_module("cv2")
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+E   ImportError: libGL.so.1: cannot open shared object file: No such file or directory
+___________________ ERROR collecting tests/test_ui_stage2.py ___________________
+ImportError while importing test module '/home/user/work/GestureAssistant/tests/test_ui_stage2.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_ui_stage2.py:1: in <module>
+    from PySide6.QtCore import QSize
+E   ModuleNotFoundError: No module named 'PySide6'
+=========================== short test summary info ============================
+ERROR tests/test_app_state.py
+ERROR tests/test_camera_worker.py
+ERROR tests/test_ui_stage2.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+============================== 3 errors in 0.47s ===============================
+
+
+=== baseline_lint; exit1 ===
+/usr/local/bin/python3.12: No module named ruff
+
+
+=== baseline_pure; exit0 ===
+........................................................................ [ 25%]
+........................................................................ [ 50%]
+........................................................................ [ 75%]
+......................................................................   [100%]
+286 passed in 0.63s
+
+
+=== reproduction_before; exit1 ===
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________ test_open_palm_from_assistant_calls_webbrowser_once ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f266fa042c0>
+
+    def test_open_palm_from_assistant_calls_webbrowser_once(monkeypatch):
+        calls = []
+        monkeypatch.setattr(browser_actions.webbrowser, "open",
+                            lambda url, **kwargs: calls.append((url, kwargs)) or True)
+        runtime, clock = url_runtime()
+        hold(runtime, clock)
+        outcome = runtime.process_one()
+>       assert outcome is not None and outcome.executed
+E       assert (None is not None)
+
+tests/test_open_url_execution.py:42: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_open_url_execution.py::test_open_palm_from_assistant_calls_webbrowser_once
+1 failed in 0.15s
+
+
+=== regression_after; exit0 ===
+............................                                             [100%]
+28 passed in 0.26s
+
+
+=== confidence_before; exit1 ===
+F.F                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_confidence_matches_the_selected_classifier[UNKNOWN-OPEN_PALM-OPEN_PALM-0.85] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f0d487e9250>
+smoothed = <Gesture.UNKNOWN: 'UNKNOWN'>, raw = <Gesture.OPEN_PALM: 'OPEN_PALM'>
+expected = <Gesture.OPEN_PALM: 'OPEN_PALM'>, confidence = 0.85
+
+    @pytest.mark.parametrize("smoothed, raw, expected, confidence", [
+        (Gesture.UNKNOWN, Gesture.OPEN_PALM, Gesture.OPEN_PALM, 0.85),
+        (Gesture.OPEN_PALM, Gesture.UNKNOWN, Gesture.OPEN_PALM, 0.81),
+        (Gesture.OPEN_PALM, Gesture.FIST, Gesture.UNKNOWN, 0.0),
+    ])
+    def test_confidence_matches_the_selected_classifier(monkeypatch, smoothed, raw, expected, confidence):
+        pipeline = AnalysisPipeline()
+        results = iter([SimpleNamespace(gesture=smoothed, confidence=0.81),
+                        SimpleNamespace(gesture=raw, confidence=0.85)])
+        monkeypatch.setattr(pipeline.gestures.classifier, "classify", lambda *args: next(results))
+        result = pipeline.process(frame(sample(), 0), 100, 100)
+>       assert result.gesture == expected and result.confidence == confidence
+E       AssertionError: assert (<Gesture.OPEN...: 'OPEN_PALM'> == <Gesture.OPEN...: 'OPEN_PALM'>
+E         
+E           OPEN_PALM and 0.81 == 0.85)
+E        +  where 0.81 = AnalysisResult(timestamp_ms=0, gesture=<Gesture.OPEN_PALM: 'OPEN_PALM'>, motion=<Motion.NONE: 'NONE'>, confidence=0.81...<Quality.VALID: 'VALID'>, cooldown_ms=0, feedback='Śledzenie', gesture_event=None, motion_event=None, tracking_epoch=0).confidence
+
+tests/test_open_url_execution.py:168: AssertionError
+_ test_confidence_matches_the_selected_classifier[OPEN_PALM-FIST-UNKNOWN-0.0] __
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f0d433e3b30>
+smoothed = <Gesture.OPEN_PALM: 'OPEN_PALM'>, raw = <Gesture.FIST: 'FIST'>
+expected = <Gesture.UNKNOWN: 'UNKNOWN'>, confidence = 0.0
+
+    @pytest.mark.parametrize("smoothed, raw, expected, confidence", [
+        (Gesture.UNKNOWN, Gesture.OPEN_PALM, Gesture.OPEN_PALM, 0.85),
+        (Gesture.OPEN_PALM, Gesture.UNKNOWN, Gesture.OPEN_PALM, 0.81),
+        (Gesture.OPEN_PALM, Gesture.FIST, Gesture.UNKNOWN, 0.0),
+    ])
+    def test_confidence_matches_the_selected_classifier(monkeypatch, smoothed, raw, expected, confidence):
+        pipeline = AnalysisPipeline()
+        results = iter([SimpleNamespace(gesture=smoothed, confidence=0.81),
+                        SimpleNamespace(gesture=raw, confidence=0.85)])
+        monkeypatch.setattr(pipeline.gestures.classifier, "classify", lambda *args: next(results))
+        result = pipeline.process(frame(sample(), 0), 100, 100)
+>       assert result.gesture == expected and result.confidence == confidence
+E       AssertionError: assert (<Gesture.UNKNOWN: 'UNKNOWN'> == <Gesture.UNKNOWN: 'UNKNOWN'>
+E         
+E           UNKNOWN and 0.85 == 0.0)
+E        +  where 0.85 = AnalysisResult(timestamp_ms=0, gesture=<Gesture.UNKNOWN: 'UNKNOWN'>, motion=<Motion.NONE: 'NONE'>, confidence=0.85, qu...lity.VALID: 'VALID'>, cooldown_ms=0, feedback='Gest nieznany', gesture_event=None, motion_event=None, tracking_epoch=0).confidence
+
+tests/test_open_url_execution.py:168: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_open_url_execution.py::test_confidence_matches_the_selected_classifier[UNKNOWN-OPEN_PALM-OPEN_PALM-0.85]
+FAILED tests/test_open_url_execution.py::test_confidence_matches_the_selected_classifier[OPEN_PALM-FIST-UNKNOWN-0.0]
+2 failed, 1 passed in 0.12s
+
+
+=== actual_exported_config; exit0 ===
+Exported config: paused blocks; explicit resume reaches fake browser once; URL matches.
+
+
+=== final_pure_1; exit0 ===
+........................................................................ [ 22%]
+........................................................................ [ 45%]
+........................................................................ [ 68%]
+........................................................................ [ 91%]
+............................                                             [100%]
+316 passed in 0.83s
+
+
+=== final_pure_2; exit0 ===
+........................................................................ [ 22%]
+........................................................................ [ 45%]
+........................................................................ [ 68%]
+........................................................................ [ 91%]
+............................                                             [100%]
+316 passed in 0.80s
+
+
+=== final_pure_3; exit0 ===
+........................................................................ [ 22%]
+........................................................................ [ 45%]
+........................................................................ [ 68%]
+........................................................................ [ 91%]
+............................                                             [100%]
+316 passed in 0.79s
+
+
+=== final_full; exit2 ===
+============================= test session starts ==============================
+platform linux -- Python 3.12.8, pytest-8.3.5, pluggy-1.6.0 -- /usr/local/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /home/user/work/GestureAssistant
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.9.0
+collecting ... collected 316 items / 3 errors
+
+==================================== ERRORS ====================================
+___________________ ERROR collecting tests/test_app_state.py ___________________
+ImportError while importing test module '/home/user/work/GestureAssistant/tests/test_app_state.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_app_state.py:1: in <module>
+    from src.gesture_assistant.app.app_state import AppState
+src/gesture_assistant/app/app_state.py:1: in <module>
+    from PySide6.QtCore import QObject, Signal
+E   ModuleNotFoundError: No module named 'PySide6'
+_________________ ERROR collecting tests/test_camera_worker.py _________________
+ImportError while importing test module '/home/user/work/GestureAssistant/tests/test_camera_worker.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_camera_worker.py:6: in <module>
+    from src.gesture_assistant.vision.camera_worker import CameraWorker
+src/gesture_assistant/vision/camera_worker.py:5: in <module>
+    import cv2
+/usr/local/lib/python3.12/site-packages/cv2/__init__.py:181: in <module>
+    bootstrap()
+/usr/local/lib/python3.12/site-packages/cv2/__init__.py:153: in bootstrap
+    native_module = importlib.import_module("cv2")
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+E   ImportError: libGL.so.1: cannot open shared object file: No such file or directory
+___________________ ERROR collecting tests/test_ui_stage2.py ___________________
+ImportError while importing test module '/home/user/work/GestureAssistant/tests/test_ui_stage2.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/test_ui_stage2.py:1: in <module>
+    from PySide6.QtCore import QSize
+E   ModuleNotFoundError: No module named 'PySide6'
+=========================== short test summary info ============================
+ERROR tests/test_app_state.py
+ERROR tests/test_camera_worker.py
+ERROR tests/test_ui_stage2.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+============================== 3 errors in 0.25s ===============================
+
+
+=== final_lint; exit1 ===
+/usr/local/bin/python3.12: No module named ruff
+
+
+=== app_start; exit1 ===
+Traceback (most recent call last):
+  File "/home/user/work/GestureAssistant/main.py", line 1, in <module>
+    from src.gesture_assistant.app.application import main
+  File "/home/user/work/GestureAssistant/src/gesture_assistant/app/application.py", line 4, in <module>
+    from PySide6.QtWidgets import QApplication
+ModuleNotFoundError: No module named 'PySide6'
+
+========== KONIEC PLIKU ==========
+
+========== PLIK: docs\EXECUTION_FIX_MANIFEST.json ==========
+{
+  "base_export": "2026-11-17 23:52:55",
+  "new_files": [
+    "docs/EXECUTION_FIX.md",
+    "docs/EXECUTION_FIX_LOG.txt",
+    "tests/test_open_url_execution.py"
+  ],
+  "modified_files": [
+    "docs/ACTIONS.md",
+    "docs/ARCHITECTURE.md",
+    "docs/HANDOFF.md",
+    "docs/SAFETY.md",
+    "src/gesture_assistant/core/action_runtime.py",
+    "src/gesture_assistant/core/analysis_pipeline.py",
+    "src/gesture_assistant/core/context_detector.py",
+    "src/gesture_assistant/core/safety_manager.py",
+    "src/gesture_assistant/integrations/browser_actions.py",
+    "src/gesture_assistant/integrations/contracts.py",
+    "src/gesture_assistant/ui/main_window.py",
+    "tests/test_context_reader.py",
+    "tests/test_ui_stage2.py"
+  ],
+  "deleted_files": [],
+  "config_json_modified": false,
+  "regression_before_exit": 1,
+  "pure_results": [
+    [
+      0,
+      "316 passed in 0.83s"
+    ],
+    [
+      0,
+      "316 passed in 0.80s"
+    ],
+    [
+      0,
+      "316 passed in 0.79s"
+    ]
+  ],
+  "full_suite_exit": 2,
+  "lint_exit": 1,
+  "gui_start_exit": 1,
+  "actual_config_with_mock_exit": 0,
+  "sha256": {
+    "src/gesture_assistant/integrations/contracts.py": "5d96a4e29e46a8bedef43ed6ea94725a0ad3a5fb34831e1e5de21fe77cc081a2",
+    "src/gesture_assistant/integrations/browser_actions.py": "64b9af2baab0d21cab57488b21671a807b61320cf4f567853948f97caf83c3c8",
+    "src/gesture_assistant/core/context_detector.py": "a08be157dea314e0b39cdb6e0f8d55e20a75589f2cae0b70114ded7529460faa",
+    "src/gesture_assistant/core/safety_manager.py": "7e50637a4bcf1b4f63521a696a267f797d98b7e15449287a3061a7bf6c66b612",
+    "src/gesture_assistant/core/analysis_pipeline.py": "f4ab7a2bc0f819f5a3252ab659314d62a93cccac8686f1f61601f7299d925084",
+    "src/gesture_assistant/core/action_runtime.py": "03dc62e87973517fe23241c7a4687cb5ede40bc2005d47f12c095703fe2d9db3",
+    "src/gesture_assistant/ui/main_window.py": "32312d0fa4c249c611e755807afe4e64cdc56cc65e9fd1ea60d19b402ad9ff9e",
+    "tests/test_open_url_execution.py": "6e64df91e5fc47c049286495634fca563b1b1ef7431c81310b42610e6a32bf42",
+    "tests/test_ui_stage2.py": "1f5c7179fcd318c1afffccf437bf88953758b09b23f9d93e0bfac6fc773dae20",
+    "tests/test_context_reader.py": "6230cdf91d7182c2bb217db2c6dfeeb99da8522a17e63eba8a9f56d650a5663c",
+    "docs/ACTIONS.md": "68c8d7fae6a5fe3adfeec9b96a6fa73b4b03ed5937b288f22f263c4deb8faa18",
+    "docs/SAFETY.md": "04dc199cb62aadd925ccb66f64d14536a8db862a9cad396c291cb983f9f424c0",
+    "docs/ARCHITECTURE.md": "f21a089a5c5356fa2f433f5861c3355cb0c7c0dacbf04e7c3cbc8961d06ad4d3",
+    "docs/HANDOFF.md": "c53a2205eec9a748a09c58275752887b6d8740a23ecb56ba1e11f174f99c1b56",
+    "docs/EXECUTION_FIX.md": "8136ffdfd4b3321135a0ff26b9cbab9bf402050f1612da607154b69c89fc2975",
+    "docs/EXECUTION_FIX_LOG.txt": "2b49b3a1d9ff5a5dee3c9c2c1270c8f5a01daae82ab2da40ac87333fc66df291"
+  },
+  "base_sha256": {
+    "src/gesture_assistant/integrations/contracts.py": "9dcdfc823c07384a25767e3d1b15cf2708bc969a16e32e3806947cdf51984502",
+    "src/gesture_assistant/integrations/browser_actions.py": "cc0dc6948d512b6383826bee62012b80d3380932f7616802864dd667672c8fb7",
+    "src/gesture_assistant/core/context_detector.py": "a4ba8bdc92a2c3cb94f9c62a18540025c77817c6b71dad6857722f12384ca923",
+    "src/gesture_assistant/core/safety_manager.py": "93c5f9b4107ca92479c1b4ab27bb471f868c14bf64204dc99dee772fd915dbfe",
+    "src/gesture_assistant/core/analysis_pipeline.py": "2c5582670f70e225d179dfa0860112d942e1f21923fcf3bcea121c2cfdbe0847",
+    "src/gesture_assistant/core/action_runtime.py": "0814edf620941f2d30360790854fba8daa9a414bcbe24abe56d674b8c2ed8d9a",
+    "src/gesture_assistant/ui/main_window.py": "64b8dde5171628905fd8f17e6b2aff65f4b609d3bd4cf4a9ae868ff8a10850d9",
+    "tests/test_ui_stage2.py": "db1f660861d6d774851bf1e88dd207bac348974c25540fe9385a9e69aa530300",
+    "tests/test_context_reader.py": "bea76e647e0d9332464c69a360d16205fdd7e4d8d167c90e6495a36cec7439b1",
+    "docs/ACTIONS.md": "8e2b67acfe3eeb3bd0bfcf8468a504dadd3db6ccab67261fa9dd7733e5ce5283",
+    "docs/SAFETY.md": "a17b6906bd70f0168860e5cabe66d149bf6c31234a20d1717ab6d0d8609f423c",
+    "docs/ARCHITECTURE.md": "09fc8f18b54137a20a4c6cf47436179d5e1e204bc03fd5b55488ac4316bf8952",
+    "docs/HANDOFF.md": "4d968fd007da8dcc937bafff9eaa4c0cd015dc14d89a2ab5276be0de876b82fc"
+  }
+}
+========== KONIEC PLIKU ==========
+
 ========== PLIK: docs\GESTURE_LIMITATIONS.md ==========
 # Zakres i ograniczenia silnika gestów
 
@@ -696,6 +1154,18 @@ Testy syntetyczne nie są dowodem realnej skuteczności ani walidacją medyczną
 ========== KONIEC PLIKU ==========
 
 ========== PLIK: docs\HANDOFF.md ==========
+# Aktualizacja: naprawa wykonywania akcji po rozpoznaniu
+
+Baza: eksport2026-11-17 23:52:55. Pełny raport EXECUTION_FIX.md i EXECUTION_FIX_LOG.txt.
+Nie nadpisano config.json, modelu, zależności ani modułów Pose.
+Nowy kontrakt ActionSpec.requires_target=True; wyjątek False tylko dla browser.open_url.
+Own context jest nadal Unknown, ale ma zachowaną tożsamość. Nie kieruj tam hotkeys.
+Używaj ActionRuntime.set_dry_run, nie zmieniaj pojedynczo executor.dry_run w GUI.
+Zmiana trybu/zapis nadal wymagają wznowienia PAUSED. Globalne inherit nie jest none.
+Nowe testy test_open_url_execution obejmują także rzeczywisty wątek konsumenta i atrapę
+webbrowser.open. Dotychczasowy scenariusz OPEN_PALM nad własnym oknem odtworzono przed
+poprawką (FAIL), po poprawce przechodzi. GUI wymaga oddzielnej weryfikacji Qt/Windows.
+
 # HANDOFF — osoba3 -> osoba4
 
 ## Uruchomienie
@@ -855,7 +1325,13 @@ pygetwindow identyfikuje aktywne okno; WinAPI potwierdza HWND i odczytuje proces
 Auto wybiera profil; Manual wybiera mapowanie, ale nie pozwala kierować Teams do innej aplikacji
 ani Media do PowerPoint. System zawsze blokowany w faktycznym Teams, browser i WebView2.
 Poprawnie odczytany pozostały proces .exe to System; nieudany odczyt to Unknown i odmowa.
-Nazwy procesów nie są uwierzytelnieniem kryptograficznym. Własne okno/dialogi są wykluczone.
+Nazwy procesów nie są uwierzytelnieniem kryptograficznym. Własne okno/dialogi nie są celem
+skrótów. Zachowujemy ich HWND/PID/exe i klasyfikujemy jako Unknown, aby nie włączyć System.
+Jedyny wyjątek: browser.open_url, z requires_target=False, przekazuje zwalidowany HTTPS do
+webbrowser, a nie do własnego okna. Może działać także nad innym znanym procesem i niezależnie
+od wymuszonego profilu, lecz przy nieudanym odczycie celu nadal odmawia.
+To nie jest ogólne dopuszczenie akcji Unknown. Żadna inna pozycja katalogu nie ma tego wyjątku.
+Pozostają wszystkie uprawnienia, PAUSED, hold, cooldown, TTL i zgodność tożsamości między guardami.
 Guard powtarzany po kolejce i tuż przed SendInput/WinAPI/webbrowser/ImageGrab.
 Między ostatnim guard a natywną operacją pozostaje wyścig fokusu.
 
@@ -890,6 +1366,14 @@ odtwarzacza, ale nadal istnieje wyścig fokusu. Wysłanie klawisza nie potwierdz
 PowerPoint jest rozpoznawany po procesie, nie po potwierdzonym trybie pokazu.
 Screenshot zapisuje pulpit lokalnie i wymaga jawnego zezwolenia; nie przesyła pliku do internetu.
 Prawdziwe Teams/PowerPoint/Media/Windows nadal wymagają osobnej weryfikacji terenowej.
+
+## Zmiana trybu wykonania
+
+set_dry_run(bool) unieważnia kolejkę i autoryzacje, synchronizuje runtime config/executor
+oraz wymaga osobnego Resume i nowego hold. Zmiana przycisku LIVE aktualizuje także checkbox
+w ustawieniach, aby późniejszy zapis mapowania nie przywracał po cichu starego DRY RUN.
+Diagnostyka aktualizuje się także po odrzuceniu klatki; stale_tracking i utrata dłoni nie
+pozostawiają starej etykiety sugerującej gotowość. Nie zwiększono TTL250ms ani gap250ms.
 
 ========== KONIEC PLIKU ==========
 
@@ -1640,6 +2124,7 @@ ModuleNotFoundError: No module named 'PySide6'
     "docs/STAGE3C_LOG.txt": "fc00913ffb2a23a3c15e1b77d17029b4180749e4bffaa45e15e8f06d72a626bd"
   }
 }
+
 ========== KONIEC PLIKU ==========
 
 ========== PLIK: docs\VERIFICATION.md ==========
@@ -2652,9 +3137,9 @@ class ActionRuntime:
             self.executor.dispatcher = NativeDispatcher(self._config)
 
     def observe(self, analysis):
-        if not self.safety.observe(analysis):
+        observed = self.safety.observe(analysis)
+        if not observed:
             self.cancel_pending()
-            return
         config = self.safety.config
         signal = analysis.motion_event.value if analysis.motion_event else analysis.gesture.value
         context = self.detector.detect(config["mode"])
@@ -2687,6 +3172,10 @@ class ActionRuntime:
                 "paused": self.safety.paused,
                 "enabled": config["safety"]["enabled"],
                 "dry_run": self.executor.dry_run,
+                "tracking_reason": self.safety.observation_reason,
+                "stable_ms": self.safety.stable_ms,
+                "required_hold_ms": config["thresholds"]["gesture_hold_ms"],
+                "consumer_running": self.is_running,
                 "reason": (
                     "paused"
                     if self.safety.paused
@@ -2696,13 +3185,17 @@ class ActionRuntime:
                         else (
                             "no_binding"
                             if action is None
-                            else self.safety.check_reason(action, signal, context)
+                            else (
+                                self.safety.observation_reason
+                                if not observed or self.safety.observation_reason
+                                else self.safety.check_reason(action, signal, context)
+                            )
                         )
                     )
                 ),
             }
 
-        if self.safety.paused or not config["safety"]["enabled"]:
+        if not observed or self.safety.paused or not config["safety"]["enabled"]:
             return
         if action is None:
             return
@@ -2712,6 +3205,14 @@ class ActionRuntime:
         request = self.safety.request(action, signal, context)
         if request is not None and not self.queue.put(request):
             self.safety.discard(request)
+
+    def set_dry_run(self, enabled):
+        """A mode switch revokes queued capabilities and always requires explicit resume."""
+        if type(enabled) is not bool:
+            raise ValueError("dry_run musi być bool.")
+        config = self.safety.config
+        config["execution"]["dry_run"] = enabled
+        self.apply_config(config)
 
     def diagnostics(self):
         with self._lock:
@@ -2904,9 +3405,11 @@ class AnalysisPipeline:
 
             motion = self.motions.update(hand, gate, now)
             confidence = (
-                classification.confidence
-                if gesture != Gesture.UNKNOWN
-                else (raw.confidence if raw.gesture != Gesture.UNKNOWN else 0.0)
+                0.0
+                if gesture == Gesture.UNKNOWN
+                else classification.confidence
+                if gesture == classification.gesture
+                else raw.confidence
             )
         else:
             self._side, self._wrist = None, None
@@ -3119,6 +3622,10 @@ class ContextSnapshot:
         return self.kind if self.mode == "Auto" else ContextKind(self.mode)
 
     @property
+    def is_own_process(self):
+        return self.foreground is not None and self.foreground.pid == os.getpid()
+
+    @property
     def system_blocked(self):
         # Browser may host Teams web. Unknown context also fails closed.
         return self.kind in (ContextKind.UNKNOWN, ContextKind.TEAMS, ContextKind.BROWSER)
@@ -3155,8 +3662,6 @@ def read_windows_foreground():
     pid = wintypes.DWORD()
     if not user.GetWindowThreadProcessId(hwnd, ctypes.byref(pid)):
         return None
-    if pid.value == os.getpid():
-        return None  # Never send actions into our own controls/dialogs.
     handle = kernel.OpenProcess(0x1000, False, pid.value)  # PROCESS_QUERY_LIMITED_INFORMATION
     if not handle:
         return None
@@ -3197,7 +3702,11 @@ class ContextDetector:
             and not any(ord(c) < 32 for c in foreground.executable)
         ):
             name = PureWindowsPath(foreground.executable).name.lower()
-            kind = PROCESS_CONTEXTS.get(name, ContextKind.SYSTEM)
+            # Retain identity for OS-launched URL, but never classify our UI as System.
+            if foreground.pid != os.getpid():
+                kind = PROCESS_CONTEXTS.get(name, ContextKind.SYSTEM)
+        else:
+            foreground = None
         return ContextSnapshot(kind, foreground, self.clock(), mode)
 
 ========== KONIEC PLIKU ==========
@@ -3364,6 +3873,7 @@ class SafetyManager:
         self._latched = set()
         self._absent = {}
         self._confirmations = {}
+        self._observation_reason = "stale_tracking"
 
     @property
     def config(self):
@@ -3373,6 +3883,18 @@ class SafetyManager:
     def paused(self):
         with self._lock:
             return self._paused
+
+    @property
+    def observation_reason(self):
+        with self._lock:
+            return self._observation_reason
+
+    @property
+    def stable_ms(self):
+        with self._lock:
+            if self._since is None or self._last is None:
+                return 0
+            return max(0, self._last - self._since)
 
     def pause(self):
         with self._lock:
@@ -3403,6 +3925,14 @@ class SafetyManager:
                 and (self._last_input is None or stamp > self._last_input)
             )
             if not timely:
+                if type(stamp) is not int:
+                    self._observation_reason = "invalid_tracking_timestamp"
+                elif stamp > now:
+                    self._observation_reason = "future_tracking"
+                elif now - stamp > thresholds["max_event_age_ms"]:
+                    self._observation_reason = "stale_tracking"
+                else:
+                    self._observation_reason = "non_monotonic_tracking"
                 self._invalidate()
                 self._absent.clear()
                 return False
@@ -3423,9 +3953,11 @@ class SafetyManager:
                 and 0 <= now - stamp <= age_limit
                 and (self._last is None or stamp > self._last)
             ):
+                self._observation_reason = "non_monotonic_tracking"
                 self._invalidate()
                 return False
             if analysis.quality != Quality.VALID:
+                self._observation_reason = "tracking_quality_" + analysis.quality.value.lower()
                 self._invalidate()
                 if analysis.quality == Quality.NO_HAND:
                     self._release_latches(None, stamp)
@@ -3433,6 +3965,7 @@ class SafetyManager:
                     self._absent.clear()
                 return False
 
+            self._observation_reason = ""
             has_motion = analysis.motion_event not in (None, Motion.NONE)
             if has_motion:
                 self._last = stamp
@@ -3462,6 +3995,11 @@ class SafetyManager:
                 self._gesture = analysis.gesture
                 return True
 
+            self._observation_reason = (
+                "gesture_unknown"
+                if analysis.gesture in (Gesture.NONE, Gesture.UNKNOWN)
+                else "low_confidence"
+            )
             # Hand is tracked with Quality.VALID, but static gesture is UNKNOWN in this frame.
             # Do not invalidate the session or wipe issued motion tokens.
             # For static hold, allow brief jitter up to 150ms before resetting hold timer.
@@ -3493,6 +4031,14 @@ class SafetyManager:
     def _context_reason(self, action, context, now):
         if not 0 <= now - context.observed_ms <= 250 or context.foreground is None:
             return "unknown_or_stale_context"
+        if not action.requires_target:
+            # URL is launched through the OS, not typed into a window. The sole exception
+            # to a known external target is our own, positively identified process.
+            if context.kind == ContextKind.UNKNOWN and not context.is_own_process:
+                return "unknown_or_stale_context"
+            return ""
+        if context.is_own_process:
+            return "assistant_window_not_target"
         if action.context == ContextKind.SYSTEM and context.system_blocked:
             return "system_blocked_in_teams_browser_or_unknown"
         if context.kind == ContextKind.UNKNOWN or context.profile != action.context:
@@ -4136,7 +4682,11 @@ from src.gesture_assistant.integrations.native_backend import require_guard
 
 ACTIONS = tuple(
     ActionSpec(
-        f"browser.{name}", ContextKind.BROWSER, destructive=name == "close_tab", implemented=True
+        f"browser.{name}",
+        ContextKind.BROWSER,
+        destructive=name == "close_tab",
+        implemented=True,
+        requires_target=name != "open_url",
     )
     for name in (
         "open_url",
@@ -4243,6 +4793,8 @@ class ActionSpec:
     context: ContextKind
     destructive: bool = False
     implemented: bool = False
+    # False only for OS-launched actions which do not send input to the foreground.
+    requires_target: bool = True
 
 
 @dataclass(frozen=True)
@@ -5046,6 +5598,16 @@ SIGNALS_CATALOG = (
 )
 
 REASON_TRANSLATIONS = {
+    "assistant_window_not_target": (
+        "Kliknij docelowy program — skrótów nie wysyłamy do okna GestureAssistant"
+    ),
+    "stale_tracking": "Analiza klatki jest za stara — sprawdź czas inferencji/FPS kamery",
+    "invalid_tracking_timestamp": "Niepoprawny znacznik czasu klatki",
+    "future_tracking": "Niezgodny zegar klatki i wykonawcy",
+    "non_monotonic_tracking": "Powtórzony lub cofnięty czas klatki",
+    "gesture_unknown": "Gest niepewny — pokaż wyraźnie dłoń",
+    "low_confidence": "Pewność gestu poniżej ustawionego progu",
+    "tracking_quality_": "Jakość śledzenia nie pozwala wykonać akcji",
     "paused": "Pauza — akcje wstrzymane przez użytkownika",
     "actions_disabled": "Akcje wyłączone w konfiguracji (safety.enabled=false)",
     "action_not_allowed": "Akcja niedozwolona (brak w allowed_actions)",
@@ -5076,6 +5638,8 @@ REASON_TRANSLATIONS = {
 
 
 def format_reason_pl(reason: str, action_id: str = "") -> str:
+    if action_id == "browser.open_url" and reason.startswith("executed"):
+        return "Przekazano URL do przeglądarki domyślnej (bez potwierdzenia załadowania)"
     if not reason:
         return "Brak blokady"
     for key, text in REASON_TRANSLATIONS.items():
@@ -5414,10 +5978,12 @@ class MainWindow(QMainWindow):
 
             row1.addWidget(QLabel("Przypisana akcja:"))
             combo = QComboBox()
-            combo.addItem("(Brak akcji)", "none")
+            if is_global:
+                combo.addItem("(Dziedzicz z aktywnego profilu)", "inherit")
+            combo.addItem("(Brak akcji — blokuj)", "none")
 
-            selected_action = current_mapping.get(sig_id, "none")
-            combo_idx = 0
+            selected_action = current_mapping.get(sig_id, "inherit" if is_global else "none")
+            combo_idx = max(0, combo.findData(selected_action))
             for _idx, act_id in enumerate(catalog_actions):
                 spec = ACTION_CATALOG[act_id]
                 # Jeśli profil specyficzny, preferuj akcje tego profilu, ale pozwól wybrać
@@ -5491,8 +6057,12 @@ class MainWindow(QMainWindow):
                 ue.setVisible(act == "browser.open_url")
                 has_shortcut = act in ALL_DEFAULT_SHORTCUTS
                 se.setVisible(has_shortcut and act != "browser.open_url")
-                if has_shortcut and not se.text():
-                    se.setText(ALL_DEFAULT_SHORTCUTS.get(act, ""))
+                if has_shortcut:
+                    se.setText(
+                        self._config["targets"]["shortcuts"].get(
+                            act, ALL_DEFAULT_SHORTCUTS.get(act, "")
+                        )
+                    )
                 self._update_effective_label(el, s, act, is_global, profile_key)
 
             combo.currentIndexChanged.connect(on_action_changed)
@@ -5513,7 +6083,9 @@ class MainWindow(QMainWindow):
         self, label: QLabel, sig: str, current_val: str, is_global: bool, profile: str
     ) -> None:
         if is_global:
-            if current_val == "none":
+            if current_val == "inherit":
+                label.setText("<small>Efektywna: dziedzicz z aktywnego profilu</small>")
+            elif current_val == "none":
                 label.setText(
                     "<small style='color: #8a939c;'>"
                     "Efektywna: Brak akcji (zablokowano globalnie)</small>"
@@ -5557,7 +6129,9 @@ class MainWindow(QMainWindow):
             sc = row["shortcut_edit"].text().strip()
 
             if is_global:
-                if act == "none":
+                if act == "inherit":
+                    new_config["bindings"].pop(sig_id, None)
+                elif act == "none":
                     new_config["bindings"][sig_id] = "none"
                 else:
                     new_config["bindings"][sig_id] = act
@@ -5567,7 +6141,7 @@ class MainWindow(QMainWindow):
                 else:
                     new_config["profiles"][profile_key][sig_id] = act
 
-            if act != "none":
+            if act not in ("none", "inherit"):
                 if chk:
                     allowed.add(act)
                 if act == "browser.open_url" and url:
@@ -5578,7 +6152,7 @@ class MainWindow(QMainWindow):
         # Uaktualnij allowed_actions dla wszystkich zaznaczonych
         for _sig_id, row in self._signal_row_widgets.items():
             act = row["combo"].currentData()
-            if act != "none":
+            if act not in ("none", "inherit"):
                 if row["allowed_check"].isChecked():
                     allowed.add(act)
                 else:
@@ -5607,13 +6181,14 @@ class MainWindow(QMainWindow):
             self._apply_configuration(new_config)
 
     def _start_dry_run_test(self) -> None:
+        self._runtime.set_dry_run(True)
         self._config["execution"]["dry_run"] = True
-        self._runtime.executor.dry_run = True
-        self._live_toggle_button.setText("Tryb: DRY RUN")
+        self._sync_execution_controls()
+        self._pause_button.setText("Akcje: PAUSED")
         self._tabs.setCurrentIndex(0)
         self._error_label.setText(
             "Uruchomiono test przypisania w trybie DRY RUN. "
-            "Wykonaj gest przed kamerą, aby zobaczyć reakcję w diagnostyce."
+            "Wznów akcje przyciskiem PAUSED, potem wykonaj gest przed kamerą."
         )
 
     def _save_settings_from_ui(self) -> None:
@@ -5643,8 +6218,9 @@ class MainWindow(QMainWindow):
         )
 
     def _on_mode_changed(self, mode: str) -> None:
-        self._config["mode"] = mode
-        self._apply_configuration(self._config)
+        config = deepcopy(self._config)
+        config["mode"] = mode
+        self._apply_configuration(config)
 
     def _apply_configuration(self, new_config: dict) -> bool:
         try:
@@ -5657,7 +6233,10 @@ class MainWindow(QMainWindow):
             self._pause_button.setText("Akcje: PAUSED")
             is_dry = self._config["execution"]["dry_run"]
             self._live_toggle_button.setText("Tryb: DRY RUN" if is_dry else "Tryb: LIVE")
-            self._error_label.setText("Zapisano i bezpiecznie zastosowano konfigurację.")
+            self._sync_execution_controls()
+            self._error_label.setText(
+                "Zapisano konfigurację. Akcje są PAUSED — świadomie wznów je przyciskiem."
+            )
             self._refresh_bindings_table()
             return True
         except Exception as exc:
@@ -5666,6 +6245,13 @@ class MainWindow(QMainWindow):
                 self, "Błąd konfiguracji", f"Niepoprawne parametry konfiguracji:\n{exc}"
             )
             return False
+
+    def _sync_execution_controls(self) -> None:
+        dry_run = self._config["execution"]["dry_run"]
+        self._live_toggle_button.setText("Tryb: DRY RUN" if dry_run else "Tryb: LIVE")
+        self._dry_run_check.setChecked(dry_run)
+        self._safety_enabled_check.setChecked(self._config["safety"]["enabled"])
+        self._sleep_check.setChecked(self._config["safety"]["sleep_computer"])
 
     def _toggle_execution_mode(self) -> None:
         currently_dry_run = self._config["execution"]["dry_run"]
@@ -5682,14 +6268,16 @@ class MainWindow(QMainWindow):
                 QMessageBox.StandardButton.No,
             )
             if choice == QMessageBox.StandardButton.Yes:
+                self._runtime.set_dry_run(False)
                 self._config["execution"]["dry_run"] = False
-                self._runtime.executor.dry_run = False
-                self._live_toggle_button.setText("Tryb: LIVE")
+                self._sync_execution_controls()
+                self._pause_button.setText("Akcje: PAUSED")
                 self._error_label.setText("Włączono tryb LIVE. Pamiętaj o wznowieniu po PAUSED.")
         else:
+            self._runtime.set_dry_run(True)
             self._config["execution"]["dry_run"] = True
-            self._runtime.executor.dry_run = True
-            self._live_toggle_button.setText("Tryb: DRY RUN")
+            self._sync_execution_controls()
+            self._pause_button.setText("Akcje: PAUSED")
             self._error_label.setText("Przełączono w bezpieczny tryb DRY RUN.")
         self._refresh_actions()
 
@@ -5717,6 +6305,7 @@ class MainWindow(QMainWindow):
             runtime=self._runtime,
             camera_settings=self._config["camera"],
         )
+        worker.apply_config(self._config)
         worker.error.connect(self._on_error)
         worker.finished.connect(self._on_worker_finished)
         self._worker = worker
@@ -5753,8 +6342,10 @@ class MainWindow(QMainWindow):
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
                 if choice == QMessageBox.StandardButton.Yes:
-                    self._config["safety"]["enabled"] = True
-                    self._apply_configuration(self._config)
+                    config = deepcopy(self._config)
+                    config["safety"]["enabled"] = True
+                    if not self._apply_configuration(config):
+                        return
                 else:
                     self._error_label.setText(
                         "Akcje wyłączone: ustaw safety.enabled w konfiguracji."
@@ -5812,9 +6403,15 @@ class MainWindow(QMainWindow):
             act_text = act if act is not None else "(brak przypisania)"
             source = diag["action_source"]
             reason_pl = format_reason_pl(diag["reason"], act or "")
+            if not diag["reason"]:
+                if not diag.get("consumer_running", True):
+                    reason_pl = "Konsument akcji nie działa — zatrzymaj i uruchom kamerę"
+                else:
+                    reason_pl = "Gotowe do wykonania / oczekiwanie na wynik kolejki"
+            progress = f" | Hold: {diag.get('stable_ms', 0)}/{diag.get('required_hold_ms', 700)} ms"
             self._effective_action_label.setText(
                 f"Gest: <b>{diag['signal']}</b> ➔ Akcja: <b>{act_text}</b> [{source}] | "
-                f"Status: <span style='color: #4c8dff;'>{reason_pl}</span>"
+                f"Status: <span style='color: #4c8dff;'>{reason_pl}</span>{progress}"
             )
 
         if self._closing and self._worker is None and not self._runtime.is_running:
@@ -7362,8 +7959,16 @@ class FakeFunction:
         return self.function(*args)
 
 
-@pytest.mark.parametrize("query_ok, changed", [(True, False), (False, False), (True, True)])
-def test_pygetwindow_reader_closes_process_handle(monkeypatch, query_ok, changed):
+@pytest.mark.parametrize(
+    "query_ok, changed, own",
+    [
+        (True, False, False),
+        (False, False, False),
+        (True, True, False),
+        (True, False, True),
+    ],
+)
+def test_pygetwindow_reader_closes_process_handle(monkeypatch, query_ok, changed, own):
     from ctypes import wintypes
 
     closed = []
@@ -7390,7 +7995,9 @@ def test_pygetwindow_reader_closes_process_handle(monkeypatch, query_ok, changed
         QueryFullProcessImageNameW=FakeFunction(query),
         CloseHandle=FakeFunction(lambda handle: closed.append(handle) or 1),
     )
-    monkeypatch.setattr(context_detector, "os", SimpleNamespace(name="nt", getpid=lambda: 999))
+    monkeypatch.setattr(
+        context_detector, "os", SimpleNamespace(name="nt", getpid=lambda: 42 if own else 999)
+    )
     monkeypatch.setattr(
         ctypes, "WinDLL", lambda name, **kw: user if name == "user32" else kernel, raising=False
     )
@@ -7943,6 +8550,278 @@ def test_trajectory_longer_than_window_never_reaches_distance():
     c = MotionClassifier()
     for i in range(5):
         assert c.update((0.2 + i * 0.0625, 0.5), Gesture.OPEN_PALM, i * 200) == Motion.NONE
+
+========== KONIEC PLIKU ==========
+
+========== PLIK: tests\test_open_url_execution.py ==========
+import os
+import threading
+from types import SimpleNamespace
+
+import pytest
+
+from src.gesture_assistant.core.action_runtime import ActionRuntime
+from src.gesture_assistant.core.analysis_pipeline import AnalysisPipeline
+from src.gesture_assistant.core.context_detector import ContextDetector, Foreground
+from src.gesture_assistant.gestures.definitions import Gesture, Quality
+from src.gesture_assistant.integrations import ACTION_CATALOG, browser_actions
+from src.gesture_assistant.integrations.contracts import ContextKind
+from tests.action_samples import Clock, analysis, policy
+from tests.gesture_samples import frame, sample
+
+
+def url_runtime(mode="Browser", pid=None, executable="python.exe", dry_run=False):
+    clock = Clock()
+    config = policy("browser.open_url")
+    config["mode"] = mode
+    config["execution"]["dry_run"] = dry_run
+    config["bindings"] = {"OPEN_PALM": "browser.open_url"}
+    config["targets"]["urls"]["browser.open_url"] = "https://example.com/watch"
+    foreground = Foreground(71, os.getpid() if pid is None else pid, "C:/Apps/" + executable)
+    detector = ContextDetector(lambda: foreground, clock)
+    return ActionRuntime(config, detector, clock), clock
+
+
+def hold(runtime, clock, start=0, end=700, gesture=Gesture.OPEN_PALM):
+    for stamp in range(start, end + 1, 100):
+        clock.value = stamp
+        runtime.observe(analysis(stamp, gesture))
+
+
+def test_open_palm_from_assistant_calls_webbrowser_once(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        browser_actions.webbrowser,
+        "open",
+        lambda url, **kwargs: calls.append((url, kwargs)) or True,
+    )
+    runtime, clock = url_runtime()
+    hold(runtime, clock)
+    outcome = runtime.process_one()
+    assert outcome is not None and outcome.executed
+    assert calls == [("https://example.com/watch", {"new": 2, "autoraise": False})]
+    hold(runtime, clock, 800, 2000)
+    assert runtime.process_one() is None
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("mode", ["Auto", "Teams", "Browser", "Presentation", "Media", "System"])
+def test_explicit_url_binding_launches_without_requiring_browser_focus(monkeypatch, mode):
+    calls = []
+    monkeypatch.setattr(browser_actions.webbrowser, "open", lambda *a, **k: calls.append(a) or True)
+    runtime, clock = url_runtime(mode, 42, "explorer.exe")
+    hold(runtime, clock)
+    outcome = runtime.process_one()
+    assert outcome.executed and len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        "browser.new_tab",
+        "system.lock",
+        "teams.toggle_mute",
+        "media.play_pause",
+        "presentation.next_slide",
+    ],
+)
+def test_own_window_never_accepts_targeted_shortcuts(action):
+    runtime, clock = url_runtime()
+    config = runtime.safety.config
+    config["mode"] = ACTION_CATALOG[action].context.value
+    config["allowed_actions"] = [action]
+    config["bindings"] = {"OPEN_PALM": action}
+    runtime.apply_config(config)
+    runtime.resume()
+    hold(runtime, clock)
+    assert runtime.detector.detect(config["mode"]).kind == ContextKind.UNKNOWN
+    assert len(runtime.queue) == 0
+    assert runtime.diagnostics()["reason"] == "assistant_window_not_target"
+
+
+def test_url_unknown_foreground_fails_closed(monkeypatch):
+    calls = []
+    monkeypatch.setattr(browser_actions.webbrowser, "open", lambda *a, **k: calls.append(a))
+    runtime, clock = url_runtime()
+    runtime.detector.reader = lambda: None
+    hold(runtime, clock)
+    assert runtime.process_one() is None
+    assert runtime.diagnostics()["reason"] == "unknown_or_stale_context"
+    assert not calls
+
+
+@pytest.mark.parametrize("condition", ["paused", "disabled", "not_allowed", "dry_run"])
+def test_url_still_requires_explicit_authorization(monkeypatch, condition):
+    calls = []
+    monkeypatch.setattr(browser_actions.webbrowser, "open", lambda *a, **k: calls.append(a) or True)
+    runtime, clock = url_runtime(dry_run=condition == "dry_run")
+    if condition == "paused":
+        runtime.pause()
+    elif condition in ("disabled", "not_allowed"):
+        config = runtime.safety.config
+        if condition == "disabled":
+            config["safety"]["enabled"] = False
+        else:
+            config["allowed_actions"] = []
+        runtime.apply_config(config)
+        runtime.resume()
+    hold(runtime, clock)
+    outcome = runtime.process_one()
+    if condition == "dry_run":
+        assert outcome.accepted and not outcome.executed
+    else:
+        assert outcome is None
+    assert not calls
+
+
+def test_url_waits_full_700ms(monkeypatch):
+    calls = []
+    monkeypatch.setattr(browser_actions.webbrowser, "open", lambda *a, **k: calls.append(a) or True)
+    runtime, clock = url_runtime()
+    hold(runtime, clock, end=600)
+    assert runtime.process_one() is None
+    clock.value = 699
+    runtime.observe(analysis(699, Gesture.OPEN_PALM))
+    assert runtime.process_one() is None
+    clock.value = 700
+    runtime.observe(analysis(700, Gesture.OPEN_PALM))
+    assert runtime.process_one().executed and len(calls) == 1
+
+
+def test_real_consumer_thread_reaches_fake_browser(monkeypatch):
+    called = threading.Event()
+    calls = []
+
+    def fake_open(url, **kwargs):
+        calls.append(url)
+        called.set()
+        return True
+
+    monkeypatch.setattr(browser_actions.webbrowser, "open", fake_open)
+    runtime, clock = url_runtime()
+    runtime.start()
+    try:
+        hold(runtime, clock)
+        assert called.wait(2), "Konsument nie dotarł do browser.open_url."
+    finally:
+        runtime.stop()
+        runtime._thread.join(timeout=2)
+    assert not runtime.is_running
+    assert runtime.status().executed and len(calls) == 1
+
+
+def test_real_pipeline_to_url_from_own_window(monkeypatch):
+    calls = []
+    monkeypatch.setattr(browser_actions.webbrowser, "open", lambda *a, **k: calls.append(a) or True)
+    runtime, clock = url_runtime()
+    pipeline = AnalysisPipeline()
+    for stamp in range(0, 701, 100):
+        clock.value = stamp
+        runtime.observe(pipeline.process(frame(sample(Gesture.OPEN_PALM), stamp), 100, 100))
+    assert runtime.process_one().executed
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "smoothed, raw, expected, confidence",
+    [
+        (Gesture.UNKNOWN, Gesture.OPEN_PALM, Gesture.OPEN_PALM, 0.85),
+        (Gesture.OPEN_PALM, Gesture.UNKNOWN, Gesture.OPEN_PALM, 0.81),
+        (Gesture.OPEN_PALM, Gesture.FIST, Gesture.UNKNOWN, 0.0),
+    ],
+)
+def test_confidence_matches_the_selected_classifier(
+    monkeypatch,
+    smoothed,
+    raw,
+    expected,
+    confidence,
+):
+    pipeline = AnalysisPipeline()
+    results = iter(
+        [
+            SimpleNamespace(gesture=smoothed, confidence=0.81),
+            SimpleNamespace(gesture=raw, confidence=0.85),
+        ]
+    )
+    monkeypatch.setattr(pipeline.gestures.classifier, "classify", lambda *args: next(results))
+    result = pipeline.process(frame(sample(), 0), 100, 100)
+    assert result.gesture == expected and result.confidence == confidence
+
+
+def test_diagnostics_refresh_after_tracking_becomes_stale():
+    runtime, clock = url_runtime()
+    hold(runtime, clock)
+    assert runtime.diagnostics()["effective_action"] == "browser.open_url"
+    clock.value = 1500
+    runtime.observe(analysis(800, Gesture.OPEN_PALM))
+    assert runtime.diagnostics()["reason"] == "stale_tracking"
+    assert runtime.diagnostics()["tracking_reason"] == "stale_tracking"
+    assert len(runtime.queue) == 0
+
+
+def test_diagnostics_refresh_after_hand_is_lost():
+    runtime, clock = url_runtime()
+    hold(runtime, clock)
+    clock.value = 800
+    runtime.observe(analysis(800, Gesture.NONE, Quality.NO_HAND))
+    diag = runtime.diagnostics()
+    assert diag["gesture"] == "NONE"
+    assert diag["tracking_reason"] == "tracking_quality_no_hand"
+    assert len(runtime.queue) == 0
+
+
+def test_switching_live_revokes_already_queued_dry_run():
+    runtime, clock = url_runtime(dry_run=True)
+    hold(runtime, clock)
+    assert len(runtime.queue) == 1
+    runtime.set_dry_run(False)
+    assert runtime.safety.paused and len(runtime.queue) == 0
+    assert not runtime.executor.dry_run
+    assert not runtime.safety.config["execution"]["dry_run"]
+    assert runtime.process_one() is None
+    runtime.resume()
+    hold(runtime, clock, 800, 1400)
+    assert runtime.process_one() is None
+    clock.value = 1500
+    runtime.observe(analysis(1500, Gesture.OPEN_PALM))
+    assert len(runtime.queue) == 1
+
+
+def test_only_open_url_is_exempt_from_foreground_target():
+    assert {name for name, spec in ACTION_CATALOG.items() if not spec.requires_target} == {
+        "browser.open_url",
+    }
+
+
+def test_url_failure_is_reported_and_does_not_stick_busy(monkeypatch):
+    monkeypatch.setattr(browser_actions.webbrowser, "open", lambda *a, **k: False)
+    runtime, clock = url_runtime()
+    hold(runtime, clock)
+    result = runtime.process_one()
+    assert not result.executed and result.reason.startswith("handler_error:")
+    assert runtime.safety._active is None
+
+
+def test_saved_live_config_still_requires_explicit_resume(monkeypatch):
+    config = policy("browser.open_url")
+    config["mode"] = "Browser"
+    config["execution"]["dry_run"] = False
+    config["safety"]["paused"] = True
+    config["bindings"] = {"OPEN_PALM": "browser.open_url"}
+    config["targets"]["urls"]["browser.open_url"] = "https://example.com"
+    clock = Clock()
+    own = Foreground(71, os.getpid(), "C:/Apps/python.exe")
+    runtime = ActionRuntime(config, ContextDetector(lambda: own, clock), clock)
+    calls = []
+    monkeypatch.setattr(browser_actions.webbrowser, "open", lambda *a, **k: calls.append(a) or True)
+    hold(runtime, clock)
+    assert runtime.process_one() is None
+    runtime.resume()
+    hold(runtime, clock, 800, 1500)
+    assert runtime.process_one().executed
+    expected = config["targets"]["urls"]["browser.open_url"]
+    assert calls == [(expected,)]
 
 ========== KONIEC PLIKU ==========
 
@@ -8900,16 +9779,16 @@ def test_camera_view_preserves_aspect(qapp):
     view.close()
 
 
-def test_diagnostic_panel_constructs_without_camera(qapp):
-    window = MainWindow()
+def test_diagnostic_panel_constructs_without_camera(qapp, tmp_path):
+    window = MainWindow(config_path=tmp_path / "gui.json")
     assert window._worker is None
     assert "Gest" in window._diagnostic_label.text()
     assert window._start_button.isEnabled()
     window.close()
 
 
-def test_actions_start_paused_and_no_executor_is_running(qapp):
-    window = MainWindow()
+def test_actions_start_paused_and_no_executor_is_running(qapp, tmp_path):
+    window = MainWindow(config_path=tmp_path / "gui.json")
 
     try:
         assert window._worker is None
@@ -8928,6 +9807,47 @@ def test_actions_start_paused_and_no_executor_is_running(qapp):
 
         assert window._runtime.safety.paused
 
+    finally:
+        window.close()
+
+
+def test_saving_global_url_keeps_other_gestures_inheriting(qapp, tmp_path):
+    window = MainWindow(config_path=tmp_path / "gui.json")
+    try:
+        palm = window._signal_row_widgets["OPEN_PALM"]
+        assert palm["combo"].currentData() == "inherit"
+        palm["combo"].setCurrentIndex(palm["combo"].findData("browser.open_url"))
+        palm["allowed_check"].setChecked(True)
+        palm["url_edit"].setText("https://example.com")
+        window._save_bindings_from_ui()
+        assert window._config["bindings"] == {"OPEN_PALM": "browser.open_url"}
+        assert "browser.open_url" in window._config["allowed_actions"]
+        assert window._runtime.safety.paused
+        palm = window._signal_row_widgets["OPEN_PALM"]
+        palm["combo"].setCurrentIndex(palm["combo"].findData("inherit"))
+        window._save_bindings_from_ui()
+        assert "OPEN_PALM" not in window._config["bindings"]
+    finally:
+        window.close()
+
+
+def test_live_button_keeps_checkbox_and_runtime_in_sync(qapp, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    window = MainWindow(config_path=tmp_path / "gui.json")
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    try:
+        window._toggle_execution_mode()
+        assert not window._config["execution"]["dry_run"]
+        assert not window._dry_run_check.isChecked()
+        assert not window._runtime.executor.dry_run
+        assert not window._runtime.safety.config["execution"]["dry_run"]
+        assert window._runtime.safety.paused
+        window._save_settings_from_ui()
+        assert not window._runtime.executor.dry_run
+        window._toggle_execution_mode()
+        assert window._dry_run_check.isChecked()
+        assert window._runtime.executor.dry_run and window._runtime.safety.paused
     finally:
         window.close()
 
